@@ -41,14 +41,14 @@ def CCASS_scrape(issue_id, queries):
 
     return df
 
-df = CCASS_scrape(issue_id = get_issue_id(ticker), queries = 20)
+df = CCASS_scrape(issue_id = get_issue_id(ticker), queries = 30)
 
 # Mapping CCASS participants
 participants = pd.read_csv('/Users/tinglam/Documents/GitHub/CCASS_tracker/CCASS_participants.csv',header=None).set_index(0)[1].to_dict()
 df = df.rename(columns = participants)
 
 # Export results
-df.to_csv(ticker + '_.csv')
+df.to_csv(ticker + '_CCASS.csv')
 
 browser.close()
 
