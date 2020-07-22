@@ -7,6 +7,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 import os
 start_time = time.time()
 
+my_path = '/Users/tinglam/Documents/GitHub'
+
 tickers = ['9988','0700','3690','1810']
 
 def scrape_single_page(ticker):
@@ -38,10 +40,12 @@ def scrape_single_page(ticker):
     df['Ticker'] = ticker
     df['Date'] = shareholding_date
 
+    df = df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
+
     ## Put intervals in between searches to avoid being spotted as a robot
     time.sleep(3)
 
-    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
+    return df
 
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
@@ -55,28 +59,28 @@ def drop_historicals(df, trailing_days = 15):
     if len(list(df['Date'].unique())) > trailing_days:
         date_list = sorted(list(df['Date'].unique()))[-trailing_days:]
         df = df.drop(list(df[~df.Date.isin(date_list)].index))
+    else:
+        pass
     return df
 
 def main():
-
     ## Import existing CCASS database
-    df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+    df = pd.read_csv(my_path + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv') 
 
     ## Perform scraping
     for ticker in tickers:
-        df = df.append(scrape_single_page(ticker), sort = True)
+        df = df.append(scrape_single_page(ticker), sort=True)
+    browser.close()
 
     ## Drop duplicates in case the program was ran more than once a day
-    df = df.drop_duplicates()
+    df = df.drop_duplicates(subset = ['Ticker','CCASS ID','Date'])
 
     ## Calculate DoD change and drop historical data
     df = get_DoD(df)
     df = drop_historicals(df)
 
     ## Save and export the database
-    df.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
-
-    browser.close()
+    df.to_csv(my_path + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
