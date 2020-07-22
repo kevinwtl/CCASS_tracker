@@ -12,7 +12,7 @@ tickers = ['9988','0700','3690','1810']
 def scrape_single_page(ticker):
     '''Go to HKEX "CCASS Shareholding Search" and check the CCASS information of the stock on that day.'''
 
-    nonlocal browser
+    global browser
 
     ## Get the browser set up
     try:
@@ -41,14 +41,14 @@ def scrape_single_page(ticker):
     ## Put intervals in between searches to avoid being spotted as a robot
     time.sleep(3)
 
-    return df
+    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
 
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
     for ticker in list(df['Ticker'].unique()):
         for participant in list(df['CCASS ID'].unique()):
             df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant)][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
-    return df
+    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
 def drop_historicals(df, trailing_days = 15):
     '''Remove historical and unnecessary data.'''
@@ -64,7 +64,7 @@ def main():
 
     ## Perform scraping
     for ticker in tickers:
-        df = df.append(scrape_single_page(ticker))
+        df = df.append(scrape_single_page(ticker), sort = True)
 
     ## Drop duplicates in case the program was ran more than once a day
     df = df.drop_duplicates()
