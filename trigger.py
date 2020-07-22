@@ -5,25 +5,32 @@ import numpy as np
 import time
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+import os
 import win32com.client as win32
 
 
-df = pd.read_csv('CCASS_tracker\CCASS_database.csv')
+df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv')
 
 # Rolling 15 days changes > 10%
-def rolling_days_changes(days,threshold):
+def rolling_days_changes(df,days = 15 ,threshold = 0.4):
+    '''Calculate rolling days changes in total CCASS holdings.'''
     date_list = sorted(list(df['Date'].unique()))[-days:]
     filtered_df = df[df.Date.isin(date_list)]
     df1 = filtered_df.groupby(['Ticker','CCASS ID'])['DoD Change'].sum().reset_index()
     df1.rename(columns = {'DoD Change':'Rolling ' + str(days) + ' day(s) Net Change (%) *'}, inplace = True)
     df1 = df1[abs(df1['Rolling ' + str(days) + ' day(s) Net Change (%) *']) > threshold]
+    return df1
 
+
+rolling_days_changes(df,10,0.4)
+
+def 
     ## Mapping CCASS participants
-    participants_dict = pd.read_csv('CCASS_tracker\CCASS_participants.csv',header=None).set_index(0)[1].to_dict()
+    participants_dict = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv',header=None).set_index(0)[1].to_dict()
     df1['Participant'] = df1['CCASS ID'].map(participants_dict)
 
     ## Mapping CCASS participants
-    securities_dict = pd.read_csv('CCASS_tracker\securities_list.csv',header=None).set_index(0)[1].to_dict()
+    securities_dict = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv',header=None).set_index(0)[1].to_dict()
     df1['Stock Name'] = df1['Ticker'].map(securities_dict)
 
     ## Display current holdings
