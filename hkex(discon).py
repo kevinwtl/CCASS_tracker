@@ -37,7 +37,7 @@ def single_page(ticker):
 
     return df
 
-df = pd.read_csv(r'C:\Users\kevinwong\Documents\GitHub\CCASS_tracker\CCASS_database.csv',index_col=['Ticker','CCASS ID','Date']) # Initial
+df = pd.read_csv(r'C:\Users\kevinwong\Documents\GitHub\CCASS_tracker\CCASS_database.csv',index_col=['Ticker','CCASS ID','Date'])
 
 for ticker in tickers:
     df = df.append(single_page(ticker))
