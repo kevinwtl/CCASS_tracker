@@ -22,9 +22,10 @@ def rolling_days_changes(df,days = 15 ,threshold = 0.4):
     return df1
 
 
-rolling_days_changes(df,10,0.4)
+rolling_days_changes(df,15,0.1)
 
-def 
+def mapping(df):
+    '''Map CCASS participants name and stocks name'''
     ## Mapping CCASS participants
     participants_dict = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv',header=None).set_index(0)[1].to_dict()
     df1['Participant'] = df1['CCASS ID'].map(participants_dict)
@@ -36,7 +37,7 @@ def
     ## Display current holdings
     df1['Current Shareholding'] = df['Shareholding']
     
-    ## 
+    ## Rename for easy understanding
     df1[r'Weight in Issued Shares (%) *'] = df[r'% of Total Issued Shares/Warrants/Units']
 
     return df1[['Ticker','Stock Name','CCASS ID','Participant','Rolling ' + str(days) + ' day(s) Net Change (%) *','Current Shareholding', r'Weight in Issued Shares (%) *']]

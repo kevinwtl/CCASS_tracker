@@ -7,7 +7,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 import os
 start_time = time.time()
 
-my_path = '/Users/tinglam/Documents/GitHub'
+#my_path = '/Users/tinglam/Documents/GitHub'
+my_path = ''
 
 tickers = ['9988','0700','3690','1810']
 
@@ -65,7 +66,7 @@ def drop_historicals(df, trailing_days = 15):
 
 def main():
     ## Import existing CCASS database
-    df = pd.read_csv(my_path + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+    df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
 
     ## Perform scraping
     for ticker in tickers:
@@ -80,7 +81,7 @@ def main():
     df = drop_historicals(df)
 
     ## Save and export the database
-    df.to_csv(my_path + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
+    df.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
