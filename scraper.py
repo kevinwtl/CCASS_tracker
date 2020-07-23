@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -19,7 +20,9 @@ def scrape_single_page(ticker):
 
     ## Get the browser set up
     try:
-        browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
+        test = browser.current_url
+        if browser.current_url[:8] != 'https://':
+            browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
     except:
         browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
         browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
@@ -32,21 +35,21 @@ def scrape_single_page(ticker):
     ## Get data on that page
     soup = BeautifulSoup(browser.page_source, 'lxml')
     table = soup.find('table')
-    df = pd.read_html(str(table))[0][['Participant ID','Shareholding',r'% of the total number of Issued Shares/ Warrants/ Units']]
-    df.columns = ['CCASS ID','Shareholding',r'% of Total Issued Shares/Warrants/Units']
+    df = pd.read_html(str(table))[0][['Participant ID','Shareholding']]
+    df.columns = ['CCASS ID','Shareholding']
     df['CCASS ID'] = df['CCASS ID'].str[16:]
-    df['Shareholding'] = df['Shareholding'].str[14:]
-    df[r'% of Total Issued Shares/Warrants/Units'] = df[r'% of Total Issued Shares/Warrants/Units'].str[57:-1].astype(float)
+    df['Shareholding'] = df['Shareholding'].str[14:].replace(',','',regex = True).astype(np.int64)
+    issued_shares = int(browser.find_elements_by_class_name('summary-value')[0].text.replace(',',''))
+
+    df[r'% of Total Issued Shares/Warrants/Units'] = df['Shareholding']/issued_shares * 100
     shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
     df['Ticker'] = ticker
     df['Date'] = shareholding_date
 
-    df = df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
-
     ## Put intervals in between searches to avoid being spotted as a robot
     time.sleep(3)
 
-    return df
+    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
 
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
@@ -66,11 +69,14 @@ def drop_historicals(df, trailing_days = 15):
 
 def main():
     ## Import existing CCASS database
-    df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+    try:
+        df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+    except FileNotFoundError:
+        df = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
 
     ## Perform scraping
     for ticker in tickers:
-        df = df.append(scrape_single_page(ticker), sort=True)
+        df = df.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
     browser.close()
 
     ## Drop duplicates in case the program was ran more than once a day
@@ -80,7 +86,8 @@ def main():
     df = get_DoD(df)
     df = drop_historicals(df)
 
-    ## Save and export the database
+    ## Sort and export the database
+    df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, False, False])
     df.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
 
     print("--- %s seconds ---" % (time.time() - start_time))
