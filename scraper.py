@@ -5,6 +5,7 @@ import requests
 import time
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from datetime import datetime
 import os
 start_time = time.time()
 
@@ -58,7 +59,16 @@ def get_DoD(df):
             df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant)][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
-def drop_historicals(df, trailing_days = 15):
+def drop_saturdays(df):
+    date_list = sorted(list(df['Date'].unique()))
+    for date in date_list:
+        if datetime(int(date[:4]),int(date[5:7]),int(date[8:])).isoweekday() == 6:
+            df = df[~(df['Date'] == date)]
+        else:
+            pass
+    return df
+
+def drop_historicals(df, trailing_days = 20):
     '''Remove historical and unnecessary data.'''
     if len(list(df['Date'].unique())) > trailing_days:
         date_list = sorted(list(df['Date'].unique()))[-trailing_days:]
@@ -82,9 +92,10 @@ def main():
     ## Drop duplicates in case the program was ran more than once a day
     df = df.drop_duplicates(subset = ['Ticker','CCASS ID','Date'])
 
-    ## Calculate DoD change and drop historical data
-    df = get_DoD(df)
+    ## Drop Saturdays & historical data, then calculate DoD change 
+    df = drop_saturdays(df)
     df = drop_historicals(df)
+    df = get_DoD(df)
 
     ## Sort and export the database
     df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, False, False])
