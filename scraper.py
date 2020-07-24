@@ -9,24 +9,16 @@ from datetime import datetime
 import os
 start_time = time.time()
 
-
-#my_path = '/Users/tinglam/Documents/GitHub'
-my_path = ''
+# Global variables
+try:
+    database = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+except FileNotFoundError:
+    database = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
+    
 tickers = ['0024', '0412', '0456', '0556', '0997', '1166', '1563', '1600', '1608', '1862', '1962', '2014', '2060', '3836', '6828', '8047', '8078', '8086', '8422', '8501']
 
 def scrape_single_page(ticker):
     '''Go to HKEX "CCASS Shareholding Search" and check the CCASS information of the stock on that day.'''
-
-    global browser
-
-    ## Get the browser set up
-    try:
-        test = browser.current_url
-        if browser.current_url[:8] != 'https://':
-            browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
-    except:
-        browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
-        browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
 
     ## Type in stock code and search
     browser.find_element_by_name('txtStockCode').clear()
@@ -43,7 +35,6 @@ def scrape_single_page(ticker):
     issued_shares = int(browser.find_elements_by_class_name('summary-value')[0].text.replace(',',''))
 
     df[r'% of Total Issued Shares/Warrants/Units'] = df['Shareholding']/issued_shares * 100
-    shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
     df['Ticker'] = ticker
     df['Date'] = shareholding_date
 
@@ -79,30 +70,46 @@ def drop_historicals(df, trailing_days = 20):
     return df
 
 def main():
-    ## Import existing CCASS database
+
+    global database
+
+    ## Get the browser set up
     try:
-        df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
-    except FileNotFoundError:
-        df = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
+        test = browser.current_url
+        if browser.current_url[:8] != 'https://':
+            browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
+    except:
+        browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
+        browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
 
-    ## Perform scraping
-    for ticker in tickers:
-        df = df.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
+    ## Check if the program was run today, or it's Saturday
+    shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
+    date_list = sorted(list(database['Date'].unique()))
+    duplication_checker = shareholding_date in date_list or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 6
 
-    browser.close()
+    if duplication_checker == True:
+        browser.close()
+        input("Database is already up to date. Press 'enter' to exit.")
+    else:
+        ## Perform scraping
+        for ticker in tickers:
+            database = database.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
 
-    ## Drop duplicates in case the program was ran more than once a day
-    df = df.drop_duplicates(subset = ['Ticker','CCASS ID','Date'])
+        browser.close()
 
-    ## Drop Saturdays & historical data, then calculate DoD change 
-    df = drop_saturdays(df)
-    df = drop_historicals(df)
-    df = get_DoD(df)
+        ## Drop duplicates in case the program was ran more than once a day
+        #database = database.drop_duplicates(subset = ['Ticker','CCASS ID','Date'])
 
-    ## Sort and export the database
-    df.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
+        ## Drop Saturdays & historical data, then calculate DoD change 
+        database = drop_saturdays(database)
+        database = drop_historicals(database)
+        database = get_DoD(database)
 
-    print("--- %s seconds ---" % (time.time() - start_time))
+        ## Sort and export the database
+        database.to_csv('CCASS_tracker' + os.sep + 'CCASS_database1.csv', index = False)
+
+        print("--- %s seconds ---" % (time.time() - start_time))
+        input("Database updated. Press 'enter' to exit.")
 
 if __name__ == "__main__":
     main()
