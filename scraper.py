@@ -9,10 +9,10 @@ from datetime import datetime
 import os
 start_time = time.time()
 
+
 #my_path = '/Users/tinglam/Documents/GitHub'
 my_path = ''
-
-tickers = ['9988','0700','3690','1810']
+tickers = ['0024', '0412', '0456', '0556', '0997', '1166', '1563', '1600', '1608', '1862', '1962', '2014', '2060', '3836', '6828', '8047', '8078', '8086', '8422', '8501']
 
 def scrape_single_page(ticker):
     '''Go to HKEX "CCASS Shareholding Search" and check the CCASS information of the stock on that day.'''
@@ -54,9 +54,10 @@ def scrape_single_page(ticker):
 
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
+    df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, True, False]).reset_index(drop = True)
     for ticker in list(df['Ticker'].unique()):
         for participant in list(df['CCASS ID'].unique()):
-            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant)][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
+            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))[-4:]))][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
 def drop_saturdays(df):
@@ -87,6 +88,7 @@ def main():
     ## Perform scraping
     for ticker in tickers:
         df = df.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
+
     browser.close()
 
     ## Drop duplicates in case the program was ran more than once a day
@@ -98,7 +100,6 @@ def main():
     df = get_DoD(df)
 
     ## Sort and export the database
-    df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, False, False])
     df.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
 
     print("--- %s seconds ---" % (time.time() - start_time))

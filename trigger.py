@@ -9,8 +9,10 @@ pd.options.display.float_format = "{:,.2f}".format
 
 df = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv')
 
+last_data_date = sorted(list(df['Date'].unique()))[-1]
+
 # Rolling 15 days changes > 10%
-def rolling_days_changes(df,days = 15 ,threshold = 1):
+def rolling_days_changes(df,days = 15 ,threshold = 10):
     '''Calculate rolling days changes in total CCASS holdings.'''
     date_list = sorted(list(df['Date'].unique()))[-days:]
     filtered_df = df[df.Date.isin(date_list)]
@@ -41,14 +43,11 @@ def rolling_days_changes(df,days = 15 ,threshold = 1):
     else:
         pass
 
-# Test
-#rolling_days_changes(df)
-
 outlook = win32.Dispatch('outlook.application')
 mail = outlook.CreateItem(0)
-mail.To = 'jameshan@chinasilveram.com'
-mail.Subject = 'Testing -- CCASS big moves'
-my_html = r"<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the CCASS big moves (&gt;1% change in the recent 15 trading days) recently.</p><p>&nbsp;</p>" + rolling_days_changes(df).to_html(index = False) + r"<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p>"
+mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
+mail.Subject = 'CCASS major changes (up to ' + last_data_date + ')'
+my_html = r"<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% change in the past 15 trading days) for stocks we are monitoring.</p><p>&nbsp;</p>" + rolling_days_changes(df).to_html(index = False) + r"<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p>"
 mail.HTMLBody = my_html
 mail.Display(False)
 #mail.Send()
