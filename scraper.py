@@ -9,6 +9,18 @@ from datetime import datetime
 import os
 start_time = time.time()
 
+
+for i in range(len(database)):
+    row = database.iloc[i]
+    count = len(row.Ticker)
+    old_val = row.Ticker
+    if count == 2:
+        row.Ticker = '00' + old_val
+    if count == 3:
+        row.Ticker = '0' + old_val
+
+database['Ticker'] = database['Ticker'].astype(str)
+
 # Global variables
 try:
     database = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
@@ -35,7 +47,7 @@ def scrape_single_page(ticker):
     issued_shares = int(browser.find_elements_by_class_name('summary-value')[0].text.replace(',',''))
 
     df[r'% of Total Issued Shares/Warrants/Units'] = df['Shareholding']/issued_shares * 100
-    df['Ticker'] = ticker
+    df['Ticker'] = int(ticker)
     df['Date'] = shareholding_date
 
     ## Put intervals in between searches to avoid being spotted as a robot
@@ -48,7 +60,7 @@ def get_DoD(df):
     df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, True, False]).reset_index(drop = True)
     for ticker in list(df['Ticker'].unique()):
         for participant in list(df['CCASS ID'].unique()):
-            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))[-4:]))][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
+            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][:-4][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
 def drop_saturdays(df):
@@ -95,6 +107,7 @@ def main():
         for ticker in tickers:
             database = database.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
 
+        #command = input("Data on requested date has been scraped. Input 'g' to scrape another date or simply press enter to exit.")
         browser.close()
 
         ## Drop duplicates in case the program was ran more than once a day
@@ -106,7 +119,7 @@ def main():
         database = get_DoD(database)
 
         ## Sort and export the database
-        database.to_csv('CCASS_tracker' + os.sep + 'CCASS_database1.csv', index = False)
+        database.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
 
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
