@@ -9,17 +9,7 @@ from datetime import datetime
 import os
 start_time = time.time()
 
-
-for i in range(len(database)):
-    row = database.iloc[i]
-    count = len(row.Ticker)
-    old_val = row.Ticker
-    if count == 2:
-        row.Ticker = '00' + old_val
-    if count == 3:
-        row.Ticker = '0' + old_val
-
-database['Ticker'] = database['Ticker'].astype(str)
+os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
 
 # Global variables
 try:

@@ -5,6 +5,8 @@ import time
 import os
 import win32com.client as win32
 
+os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
+
 # Global variables
 pd.options.display.float_format = "{:,.2f}".format
 database = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv')
@@ -36,7 +38,7 @@ def sub_table(row, threshold_multiplier = 0.1):
 
     ticker = row['Ticker']
     CCASS_ID = row['CCASS ID']
-    threshold = row['Cumulative Change'] * threshold_multiplier
+    threshold = abs(row['Cumulative Change']) * threshold_multiplier
 
     df = database.groupby(['Ticker','CCASS ID']).get_group((ticker,CCASS_ID)).loc[(abs(database['DoD Change'])>threshold)].reset_index(drop = True)
 
@@ -55,7 +57,7 @@ def sub_table(row, threshold_multiplier = 0.1):
 
 def create_mail_draft(df):
     mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
-    mail.Subject = 'CCASS major changes (up to ' + last_data_date + ')'
+    mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
     my_html = r"<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% change in the past 15 trading days) for stocks we are monitoring.</p><p>&nbsp;</p>" + df.to_html(index = True) + r"<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p>"
     mail.HTMLBody = my_html
     mail.Display(False)
@@ -76,7 +78,7 @@ def main():
     table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Date'])
 
     create_mail_draft(table)
-
+    
     #mail.Send()
 
 if __name__ == "__main__":
