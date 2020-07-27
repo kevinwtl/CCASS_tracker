@@ -3,18 +3,20 @@ from bs4 import BeautifulSoup
 import numpy as np
 import time
 import os
+import matplotlib.pyplot as plt
+import base64
 import win32com.client as win32
 
 os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
 
 # Global variables
 pd.options.display.float_format = "{:,.2f}".format
-database = pd.read_csv('data' + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv')
+database = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv')
 last_data_date = sorted(list(database['Date'].unique()))[-1]
 outlook = win32.Dispatch('outlook.application')
 mail = outlook.CreateItem(0)
-participants_dict = pd.read_csv('data' + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_participants.csv',header=None).set_index(0)[1].to_dict()
-securities_dict = pd.read_csv('data' + os.sep + 'CCASS_tracker' + os.sep + 'securities_list.csv',header=None).set_index(0)[1].to_dict()
+participants_dict = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_participants.csv',header=None).set_index(0)[1].to_dict()
+securities_dict = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'securities_list.csv',header=None).set_index(0)[1].to_dict()
 
 
 def find_block_trader(df, days = 15 ,threshold = 10):
@@ -55,13 +57,27 @@ def sub_table(row, threshold_multiplier = 0.1):
     return df
 
 
-def create_mail_draft(df):
-    mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
-    mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
-    my_html = r"<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% change in the past 15 trading days) for stocks that we are monitoring.</p><p>&nbsp;</p>" + df.to_html(index = True) + r"<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p>"
-    mail.HTMLBody = my_html
-    mail.Display(False)
+def create_graph(df, ticker, CCASS_ID, export_path):
 
+    df1 = database[(database['Ticker'] == ticker) & (database['CCASS ID'] == CCASS_ID)][['Date', 'Shareholding']].sort_values('Date').set_index('Date')
+    date = df1.index.str[-2:]
+    data = df1['Shareholding']/1000000
+
+    t = np.arange(0,len(df1))
+    fig, ax = plt.subplots()
+
+    ax.plot(date, data)
+
+    ax.set(xlabel = 'Day', ylabel = 'Shareholding (million)',
+            title = str(ticker) + ' Shareholdings by ' + CCASS_ID)
+
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    fig.savefig(export_path)
+    #plt.show()
+    plt.close(fig)
+
+
+encoded = base64.b64encode(open("CCASS_tracker\\cache\\fig_0.png", "rb").read())
 
 def main():
 
@@ -77,9 +93,30 @@ def main():
 
     table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Date'])
 
-    create_mail_draft(table)
+    graphing_df = table.reset_index()[['Ticker','Stock Name','CCASS ID','Participant']].drop_duplicates().reset_index(drop = True)
+
+    ## Create multiple graphs and save them
+    graphs_count = len(graphing_df.index)
+    for i in range(graphs_count):
+        ticker = graphing_df.iloc[i]['Ticker']
+        CCASS_ID = graphing_df.iloc[i]['CCASS ID']
+        fig_path = 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i)
+        create_graph(df = database, ticker = ticker, CCASS_ID = CCASS_ID, export_path = fig_path)
+
+    png_address_list = []
+    for i in range(graphs_count):
+        png_address_list.append('<img src="' + os.getcwd() + os.sep + 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i) +'.png"/>')
+
+    mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
+    mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
+    png_aggregated_html = ''.join(png_address_list)
+    my_html = "<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% change in the past 15 trading days) for stocks that we are monitoring.</p><p>&nbsp;</p>" + table.to_html(index = True) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html + "<p>Regards,</p><p>Kevin Wong</p>"
+    mail.HTMLBody = my_html
+    mail.Display(False)
     
-    mail.Send()
+    #mail.Send()
+
+
 
 if __name__ == "__main__":
     main()

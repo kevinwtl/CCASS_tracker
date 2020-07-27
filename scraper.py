@@ -13,7 +13,7 @@ os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
 
 # Global variables
 try:
-    database = pd.read_csv('data' + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+    database = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv') 
 except FileNotFoundError:
     database = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
     
