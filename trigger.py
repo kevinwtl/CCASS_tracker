@@ -57,7 +57,7 @@ def sub_table(row, threshold_multiplier = 0.1):
     return df
 
 
-def create_graph(df, ticker, CCASS_ID, export_path):
+def create_graph(ticker, CCASS_ID, export_path):
 
     df1 = database[(database['Ticker'] == ticker) & (database['CCASS ID'] == CCASS_ID)][['Date', 'Shareholding']].sort_values('Date').set_index('Date')
     date = df1.index.str[-2:]
@@ -69,15 +69,14 @@ def create_graph(df, ticker, CCASS_ID, export_path):
     ax.plot(date, data)
 
     ax.set(xlabel = 'Day', ylabel = 'Shareholding (million)',
-            title = str(ticker) + ' Shareholdings by ' + CCASS_ID)
+            title = '"' + securities_dict.get(ticker) + '" Shareholdings by "' + participants_dict.get(CCASS_ID) + '"')
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    fig.set_size_inches(9, 3.5)
     fig.savefig(export_path)
     #plt.show()
     plt.close(fig)
 
-
-encoded = base64.b64encode(open("CCASS_tracker\\cache\\fig_0.png", "rb").read())
 
 def main():
 
@@ -101,7 +100,7 @@ def main():
         ticker = graphing_df.iloc[i]['Ticker']
         CCASS_ID = graphing_df.iloc[i]['CCASS ID']
         fig_path = 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i)
-        create_graph(df = database, ticker = ticker, CCASS_ID = CCASS_ID, export_path = fig_path)
+        create_graph(ticker = ticker, CCASS_ID = CCASS_ID, export_path = fig_path)
 
     png_address_list = []
     for i in range(graphs_count):
