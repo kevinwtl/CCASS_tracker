@@ -13,7 +13,7 @@ os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
 
 # Global variables
 try:
-    database = pd.read_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv') 
+    database = pd.read_csv('data' + os.sep + 'CCASS_tracker' + os.sep + 'CCASS_database.csv') 
 except FileNotFoundError:
     database = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
     
@@ -48,9 +48,22 @@ def scrape_single_page(ticker):
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
     df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, True, False]).reset_index(drop = True)
+
+
     for ticker in list(df['Ticker'].unique()):
         for participant in list(df['CCASS ID'].unique()):
-            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][:-4][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
+            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
+    
+    # Handle first-time purchase (i.e. historical data is not available)
+    for i in range(len(df[(df['DoD Change'].isnull())])):
+        try:
+            row = df[(df['DoD Change'].isnull())].iloc[i]
+            if row['Date'] != sorted(list(df['Date'].unique()))[0]:
+                index = row.name
+                df.loc[index,'DoD Change'] = row[r'% of Total Issued Shares/Warrants/Units']
+        except:
+            pass
+
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
 def drop_saturdays(df):
@@ -100,6 +113,9 @@ def main():
         #command = input("Data on requested date has been scraped. Input 'g' to scrape another date or simply press enter to exit.")
         browser.close()
 
+        ## Drop unnamed participants
+        database.dropna(subset = ['CCASS ID'],inplace = True)
+
         ## Drop duplicates in case the program was ran more than once a day
         #database = database.drop_duplicates(subset = ['Ticker','CCASS ID','Date'])
 
@@ -113,6 +129,7 @@ def main():
 
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
+
 
 if __name__ == "__main__":
     main()
