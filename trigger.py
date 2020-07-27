@@ -79,7 +79,7 @@ def main():
 
     create_mail_draft(table)
     
-    #mail.Send()
+    mail.Send()
 
 if __name__ == "__main__":
     main()
