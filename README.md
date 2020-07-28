@@ -5,6 +5,6 @@ This repository scrape the CCASS Shareholding data of selected stocks from [Hong
 
 ## Flowchart
 
-![Flowchart](https://app.code2flow.com/Cj0xU0.png)
+![Flowchart](https://app.code2flow.com/7pIxfSe5pOrt.code.png)
 
-Created with app.code2flow.
+Created with app.code2flow.com
