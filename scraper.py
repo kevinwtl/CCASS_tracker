@@ -86,7 +86,7 @@ def drop_historicals(df, trailing_days = 20):
 
 def main():
 
-    global database
+    global database, browser, shareholding_date
 
     ## Get the browser set up
     try:
@@ -125,7 +125,7 @@ def main():
         database = get_DoD(database)
 
         ## Sort and export the database
-        database.to_csv('CCASS_tracker' + os.sep + 'CCASS_database.csv', index = False)
+        database.to_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv', index = False)
 
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
