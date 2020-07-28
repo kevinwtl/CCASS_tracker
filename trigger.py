@@ -85,6 +85,7 @@ def main():
 
     global last_data_date, database, mail, outlook
 
+    ## Create a table which shows block traders
     table = pd.DataFrame()
     for i in find_block_trader(database).index:
         table = table.append(sub_table(find_block_trader(database).iloc[i]).reset_index(drop = False))
