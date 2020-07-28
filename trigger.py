@@ -66,7 +66,8 @@ def create_graph(ticker, CCASS_ID, export_path):
     t = np.arange(0,len(df1))
     fig, ax = plt.subplots()
 
-    ax.plot(date, data)
+    #ax.plot(date, data)
+    ax.bar(date, data, 0.35)
 
     ax.set(xlabel = 'Day in month', ylabel = 'Shareholding (million)',
             title = str(ticker) + ' Shareholdings by "' + participants_dict.get(CCASS_ID) + '"')
