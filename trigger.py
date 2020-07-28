@@ -68,11 +68,11 @@ def create_graph(ticker, CCASS_ID, export_path):
 
     ax.plot(date, data)
 
-    ax.set(xlabel = 'Day', ylabel = 'Shareholding (million)',
-            title = '"' + securities_dict.get(ticker) + '" Shareholdings by "' + participants_dict.get(CCASS_ID) + '"')
+    ax.set(xlabel = 'Day in month', ylabel = 'Shareholding (million)',
+            title = str(ticker) + ' Shareholdings by "' + participants_dict.get(CCASS_ID) + '"')
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    fig.set_size_inches(9, 3.5)
+    fig.set_size_inches(9, 3.7)
     fig.savefig(export_path)
     #plt.show()
     plt.close(fig)
