@@ -27,6 +27,9 @@ def scrape_single_page(ticker):
     browser.find_element_by_name('txtStockCode').send_keys(ticker)
     browser.find_element_by_id('btnSearch').click()
 
+    ## Put intervals in between searches to avoid being spotted as a robot
+    time.sleep(2.5)
+
     ## Get data on that page
     soup = BeautifulSoup(browser.page_source, 'lxml')
     table = soup.find('table')
@@ -40,8 +43,6 @@ def scrape_single_page(ticker):
     df['Ticker'] = int(ticker)
     df['Date'] = shareholding_date
 
-    ## Put intervals in between searches to avoid being spotted as a robot
-    time.sleep(3)
 
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
 
@@ -95,7 +96,14 @@ def main():
             browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
     except:
         browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
+        browser.minimize_window()
         browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
+
+        ## Search something first so the df wont be off
+        browser.find_element_by_name('txtStockCode').clear()
+        browser.find_element_by_name('txtStockCode').send_keys('0024')
+        browser.find_element_by_id('btnSearch').click()
+
 
     ## Check if the program was run today, or it's Saturday
     shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
@@ -129,6 +137,8 @@ def main():
 
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
+
+        exit()
 
 
 if __name__ == "__main__":
