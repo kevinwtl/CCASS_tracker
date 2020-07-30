@@ -38,9 +38,8 @@ def scrape_single_page(ticker):
     df['CCASS ID'] = df['CCASS ID'].str[16:]
     df['Shareholding'] = df['Shareholding'].str[14:].replace(',','',regex = True).astype(np.int64)
     issued_shares = int(browser.find_elements_by_class_name('summary-value')[0].text.replace(',',''))
-
     df[r'% of Total Issued Shares/Warrants/Units'] = df['Shareholding']/issued_shares * 100
-    df['Ticker'] = int(ticker)
+    df['Ticker'] = int(browser.find_element_by_name('txtStockCode').get_attribute('value'))
     df['Date'] = shareholding_date
 
 
@@ -90,19 +89,14 @@ def main():
     global database, browser, shareholding_date
 
     ## Get the browser set up
-    try:
-        test = browser.current_url
-        if browser.current_url[:8] != 'https://':
-            browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
-    except:
-        browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
-        browser.minimize_window()
-        browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
+    browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
+    browser.minimize_window()
+    browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
 
-        ## Search something first so the df wont be off
-        browser.find_element_by_name('txtStockCode').clear()
-        browser.find_element_by_name('txtStockCode').send_keys('0024')
-        browser.find_element_by_id('btnSearch').click()
+    # ## Search something first so the df wont be off
+    # browser.find_element_by_name('txtStockCode').clear()
+    # browser.find_element_by_name('txtStockCode').send_keys('0024')
+    # browser.find_element_by_id('btnSearch').click()
 
 
     ## Check if the program was run today, or it's Saturday
@@ -138,7 +132,6 @@ def main():
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
 
-        exit()
 
 
 if __name__ == "__main__":
