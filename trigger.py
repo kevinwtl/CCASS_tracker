@@ -19,7 +19,7 @@ participants_dict = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CC
 securities_dict = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'securities_list.csv',header=None).set_index(0)[1].to_dict()
 
 
-def find_block_trader(df, days = 15 ,threshold = 10):
+def block_trade_query(df, days = 15 ,threshold = 10):
 
     date_list = sorted(list(df['Date'].unique()))[-days:]
     filtered_df = df[df.Date.isin(date_list)]
@@ -36,12 +36,9 @@ def find_block_trader(df, days = 15 ,threshold = 10):
     return df1.reset_index(drop = False)
 
 
-def sub_table(row, threshold_multiplier = 0.1):
+def recent_trades_query(ticker,CCASS_ID,cum_change,threshold_multiplier = 0.1):
 
-    ticker = row['Ticker']
-    CCASS_ID = row['CCASS ID']
-    cum_change = row['Cumulative Change']
-    threshold = abs(row['Cumulative Change']) * threshold_multiplier
+    threshold = abs(cum_change) * threshold_multiplier
 
     df = database.groupby(['Ticker','CCASS ID']).get_group((ticker,CCASS_ID)).loc[(abs(database['DoD Change'])>threshold)].reset_index(drop = True)
 
@@ -85,10 +82,18 @@ def main():
 
     global last_data_date, database, mail, outlook
 
-    ## Create a table which shows block traders
+    ## Create a summary tables of all the block traders
+    summary_df = block_trade_query(df = database, days = 15 ,threshold = 10)
+    summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.01))
+    summary_df.reset_index(drop = True, inplace = True)
+
+    ## Create a table which shows block traders & its recent trades
     table = pd.DataFrame()
-    for i in find_block_trader(database).index:
-        table = table.append(sub_table(find_block_trader(database).iloc[i]).reset_index(drop = False))
+    for i in summary_df.index:
+        temp_row = summary_df.iloc[i]
+        temp_table = recent_trades_query(ticker = temp_row['Ticker'],CCASS_ID = temp_row['CCASS ID'],cum_change = temp_row['Cumulative Change'])
+        table = table.append(temp_table)
+    table.reset_index(drop = False, inplace = True)
 
     ## Mapping CCASS participants & Stock names
     table['Participant'] = table['CCASS ID'].map(participants_dict)
