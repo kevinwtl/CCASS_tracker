@@ -28,7 +28,8 @@ def scrape_single_page(ticker):
     browser.find_element_by_id('btnSearch').click()
 
     ## Put intervals in between searches to avoid being spotted as a robot
-    time.sleep(2.5)
+    browser.implicitly_wait(2)
+    time.sleep(2)
 
     ## Get data on that page
     soup = BeautifulSoup(browser.page_source, 'lxml')
@@ -90,7 +91,7 @@ def main():
 
     ## Get the browser set up
     browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
-    browser.minimize_window()
+    #browser.minimize_window()
     browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
 
     # ## Search something first so the df wont be off
