@@ -42,9 +42,9 @@ def recent_trades_query(ticker,CCASS_ID,cum_change,threshold_multiplier = 0.1):
 
     df = database.groupby(['Ticker','CCASS ID']).get_group((ticker,CCASS_ID)).loc[(abs(database['DoD Change'])>threshold)].reset_index(drop = True)
 
-    df['Cumulative Change (%) *'] = cum_change
+    df['Net Cumulative Change (%) *'] = cum_change
     #df = df.append(row)
-    df = df.set_index(['Ticker','CCASS ID','Cumulative Change (%) *', 'Date'])
+    df = df.set_index(['Ticker','CCASS ID','Net Cumulative Change (%) *', 'Date'])
 
     df = df.sort_values(by = 'Date', ascending = True)
 
@@ -86,7 +86,7 @@ def main():
     summary_df = block_trade_query(df = database, days = 15 ,threshold = 10)
     
     ### Temporary tracker for 2014.HK
-    summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.01))
+    summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.1))
     summary_df.reset_index(drop = True, inplace = True)
 
     ## Create a table which shows block traders & its recent trades
@@ -101,7 +101,7 @@ def main():
     table['Participant'] = table['CCASS ID'].map(participants_dict)
     table['Stock Name'] = table['Ticker'].map(securities_dict)
 
-    table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Cumulative Change (%) *', 'Date'])
+    table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Net Cumulative Change (%) *', 'Date'])
 
     graphing_df = table.reset_index()[['Ticker','Stock Name','CCASS ID','Participant']].drop_duplicates().reset_index(drop = True)
 
@@ -130,7 +130,7 @@ def main():
     mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
     mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
     png_aggregated_html = ''.join(png_address_list)
-    my_html = "<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% change in the past 15 trading days) for stocks that we are monitoring.</p><p>&nbsp;</p>" + table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html + "<p>Regards,</p><p>Kevin Wong</p>"
+    my_html = "<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% net cumulative change in the past 15 trading days) for stocks that we are monitoring.</p><p>&nbsp;</p>" + table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html + "<p>Regards,</p><p>Kevin Wong</p>"
     mail.HTMLBody = my_html
     mail.Display(False)
     
