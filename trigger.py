@@ -130,8 +130,17 @@ def main():
     mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
     mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
     png_aggregated_html = ''.join(png_address_list)
-    my_html = "<p>Dear Team,</p><p>&nbsp;</p><p>Here's the summary of the recent CCASS major changes (&gt;10% net cumulative change in the past 15 trading days) for stocks that we are monitoring.</p><p>&nbsp;</p>" + table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html + "<p>Regards,</p><p>Kevin Wong</p>"
-    mail.HTMLBody = my_html
+
+    heading_html =  "<p>Dear Team,</p><p>&nbsp;</p>"
+    no_change_html = "<p>There were NO significant changes on CCASS yesterday. Here's the recap of the previous major changes (&gt;10% net cumulative change in the past 15 trading days)."
+    with_change_html = "<p>Here's the summary of the recent CCASS major changes (&gt;10% net cumulative change in the past 15 trading days).</p><p>&nbsp;</p>"
+    opening_html = with_change_html if last_data_date in list(table.reset_index()['Date'].unique()) else no_change_html
+    ending_html = "<p>Regards,</p><p>Kevin Wong</p>"
+    content_html = table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html
+
+    aggregated_html = heading_html + opening_html + content_html + ending_html
+
+    mail.HTMLBody = aggregated_html
     mail.Display(False)
     
     #mail.Send()
