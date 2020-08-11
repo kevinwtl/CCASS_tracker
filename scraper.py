@@ -6,6 +6,7 @@ import time
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
+import sys
 import os
 start_time = time.time()
 
@@ -106,15 +107,16 @@ def main():
     duplication_checker = shareholding_date in date_list or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 6
 
     if duplication_checker == True:
-        browser.close()
+        browser.quit()
         input("Database is already up to date. Press 'enter' to exit.")
+        sys.exit()
     else:
         ## Perform scraping
         for ticker in tickers:
             database = database.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
 
         #command = input("Data on requested date has been scraped. Input 'g' to scrape another date or simply press enter to exit.")
-        browser.close()
+        browser.quit()
 
         ## Drop unnamed participants
         database.dropna(subset = ['CCASS ID'],inplace = True)
@@ -132,6 +134,7 @@ def main():
 
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
+        sys.exit()
 
 
 
