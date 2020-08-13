@@ -133,7 +133,8 @@ def main():
         database.to_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv', index = False)
 
         print("--- %s seconds ---" % (time.time() - start_time))
-        input("Database updated. Press 'enter' to exit.")
+        #input("Database updated. Press 'enter' to exit.")
+        time.sleep(10)
         sys.exit()
 
 

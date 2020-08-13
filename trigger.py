@@ -86,8 +86,8 @@ def main():
     summary_df = block_trade_query(df = database, days = 15 ,threshold = 10)
     
     ### Temporary tracker for 2014.HK
-    summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.1))
-    summary_df.reset_index(drop = True, inplace = True)
+    #summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.1))
+    #summary_df.reset_index(drop = True, inplace = True)
 
     ## Create a table which shows block traders & its recent trades
     table = pd.DataFrame()
