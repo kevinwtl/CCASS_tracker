@@ -84,66 +84,73 @@ def main():
 
     ## Create a summary tables of all the block traders
     summary_df = block_trade_query(df = database, days = 15 ,threshold = 10)
-    
-    ### Temporary tracker for 2014.HK
-    #summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.1))
-    #summary_df.reset_index(drop = True, inplace = True)
+        ### Temporary tracker for 2014.HK
+        #summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.1))
+    summary_df.reset_index(drop = True, inplace = True)
 
-    ## Create a table which shows block traders & its recent trades
-    table = pd.DataFrame()
-    for i in summary_df.index:
-        temp_row = summary_df.iloc[i]
-        temp_table = recent_trades_query(ticker = temp_row['Ticker'],CCASS_ID = temp_row['CCASS ID'],cum_change = temp_row['Cumulative Change'])
-        table = table.append(temp_table)
-    table.reset_index(drop = False, inplace = True)
+    if len(summary_df) == 0: # When there were no changes
+        mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
+        mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
+        my_html = '<body style="font-size:11pt;font-family:Calibri"><p>Dear Team,</p><p>&nbsp;</p><p>There were NO significant net changes on CCASS (&gt; 10% net cumulative change) over the last 15 trading days.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p></body>'
+        mail.HTMLBody = my_html
+        mail.Display(False)
+        #mail.Send()
+    else:
+        ## Create a table which shows block traders & its recent trades
+        table = pd.DataFrame()
+        for i in summary_df.index:
+            temp_row = summary_df.iloc[i]
+            temp_table = recent_trades_query(ticker = temp_row['Ticker'],CCASS_ID = temp_row['CCASS ID'],cum_change = temp_row['Cumulative Change'])
+            table = table.append(temp_table)
+        table.reset_index(drop = False, inplace = True)
 
-    ## Mapping CCASS participants & Stock names
-    table['Participant'] = table['CCASS ID'].map(participants_dict)
-    table['Stock Name'] = table['Ticker'].map(securities_dict)
+        ## Mapping CCASS participants & Stock names
+        table['Participant'] = table['CCASS ID'].map(participants_dict)
+        table['Stock Name'] = table['Ticker'].map(securities_dict)
 
-    table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Net Cumulative Change (%) *', 'Date'])
+        table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Net Cumulative Change (%) *', 'Date'])
 
-    graphing_df = table.reset_index()[['Ticker','Stock Name','CCASS ID','Participant']].drop_duplicates().reset_index(drop = True)
+        graphing_df = table.reset_index()[['Ticker','Stock Name','CCASS ID','Participant']].drop_duplicates().reset_index(drop = True)
 
-    ## Create multiple graphs and save them
-    graphs_count = len(graphing_df.index)
-    for i in range(graphs_count):
-        ticker = graphing_df.iloc[i]['Ticker']
-        CCASS_ID = graphing_df.iloc[i]['CCASS ID']
-        fig_path = 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i)
-        create_graph(ticker = ticker, CCASS_ID = CCASS_ID, export_path = fig_path)
+        ## Create multiple graphs and save them
+        graphs_count = len(graphing_df.index)
+        for i in range(graphs_count):
+            ticker = graphing_df.iloc[i]['Ticker']
+            CCASS_ID = graphing_df.iloc[i]['CCASS ID']
+            fig_path = 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i)
+            create_graph(ticker = ticker, CCASS_ID = CCASS_ID, export_path = fig_path)
 
-    png_address_list = []
-    for i in range(graphs_count):
-        png_address_list.append('<img src="' + os.getcwd() + os.sep + 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i) +'.png"/>')
+        png_address_list = []
+        for i in range(graphs_count):
+            png_address_list.append('<img src="' + os.getcwd() + os.sep + 'CCASS_tracker' + os.sep + 'cache' + os.sep + 'fig_' + str(i) +'.png"/>')
 
-    ## Adding thousand separator to "Shareholding"
-    num_format = lambda x: '{:,}'.format(x)
-    def build_formatters(df, format):
-        return {
-            column:format 
-            for column, dtype in df.dtypes.items()
-            if dtype in [ np.dtype('int64')] 
-        }
-    formatters = build_formatters(table, num_format)
+        ## Adding thousand separator to "Shareholding"
+        num_format = lambda x: '{:,}'.format(x)
+        def build_formatters(df, format):
+            return {
+                column:format 
+                for column, dtype in df.dtypes.items()
+                if dtype in [ np.dtype('int64')] 
+            }
+        formatters = build_formatters(table, num_format)
 
-    mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
-    mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
-    png_aggregated_html = ''.join(png_address_list)
+        mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
+        mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
+        png_aggregated_html = ''.join(png_address_list)
 
-    heading_html =  "<p>Dear Team,</p><p>&nbsp;</p>"
-    no_change_html = "<p>There were NO significant changes on CCASS yesterday. Here's the recap of the previous major changes (&gt;10% net cumulative change in the past 15 trading days)."
-    with_change_html = "<p>Here's the summary of the recent CCASS major changes (&gt;10% net cumulative change in the past 15 trading days).</p><p>&nbsp;</p>"
-    opening_html = with_change_html if last_data_date in list(table.reset_index()['Date'].unique()) else no_change_html
-    ending_html = "<p>Regards,</p><p>Kevin Wong</p>"
-    content_html = table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html
+        heading_html =  "<p>Dear Team,</p><p>&nbsp;</p>"
+        no_change_html = "<p>There were NO significant changes on CCASS yesterday. Here's the recap of the previous major changes (&gt;10% net cumulative change over the last 15 trading days).</p>"
+        with_change_html = "<p>Here's the summary of the recent CCASS major changes (&gt;10% net cumulative change over the last 15 trading days).</p><p>&nbsp;</p>"
+        opening_html = with_change_html if last_data_date in list(table.reset_index()['Date'].unique()) else no_change_html
+        ending_html = "<p>Regards,</p><p>Kevin Wong</p>"
+        content_html = table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html
 
-    aggregated_html = heading_html + opening_html + content_html + ending_html
+        aggregated_html = '<body style="font-size:11pt;font-family:Calibri">' + heading_html + opening_html + content_html + ending_html + '</body>'
 
-    mail.HTMLBody = aggregated_html
-    mail.Display(False)
-    
-    #mail.Send()
+        mail.HTMLBody = aggregated_html
+        mail.Display(False)
+        
+        #mail.Send()
 
 
 
