@@ -101,10 +101,10 @@ def main():
     # browser.find_element_by_id('btnSearch').click()
 
 
-    ## Check if the program was run today, or it's Saturday
+    ## Check if the program was run today, or it's Sat/Sun
     shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
     date_list = sorted(list(database['Date'].unique()))
-    duplication_checker = shareholding_date in date_list or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 6
+    duplication_checker = shareholding_date in date_list or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 6 or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 7
 
     if duplication_checker == True:
         browser.quit()

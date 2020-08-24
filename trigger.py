@@ -4,7 +4,6 @@ import numpy as np
 import time
 import os
 import matplotlib.pyplot as plt
-import base64
 import win32com.client as win32
 
 os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
@@ -84,8 +83,9 @@ def main():
 
     ## Create a summary tables of all the block traders
     summary_df = block_trade_query(df = database, days = 15 ,threshold = 10)
-        ### Temporary tracker for 2014.HK
-        #summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 2014)], days = 15 ,threshold = 0.1))
+    ### Temporary tracker for 997.HK
+    summary_df = summary_df.append(block_trade_query(df = database[(database['Ticker'] == 997)], days = 15 ,threshold = 0.1))
+    
     summary_df.reset_index(drop = True, inplace = True)
 
     if len(summary_df) == 0: # When there were no changes

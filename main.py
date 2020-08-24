@@ -7,4 +7,3 @@ if __name__ == "__main__":
     os.system('CCASS_tracker\\scraper.py')
 
     os.system('CCASS_tracker\\trigger.py')
- 
