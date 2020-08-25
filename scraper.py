@@ -14,7 +14,7 @@ os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
 
 # Global variables
 try:
-    database = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv') 
+    database = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv') # Import Database
 except FileNotFoundError:
     database = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
     
@@ -82,10 +82,12 @@ def get_DoD(df):
     
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
-def drop_saturdays(df):
+def drop_weekends(df):
+    '''Remove data on weekends because they are the same as Friday.'''
     date_list = sorted(list(df['Date'].unique()))
     for date in date_list:
-        if datetime(int(date[:4]),int(date[5:7]),int(date[8:])).isoweekday() == 6:
+        day_of_week = datetime(int(date[:4]),int(date[5:7]),int(date[8:])).isoweekday()
+        if day_of_week == 6 or day_of_week == 7:
             df = df[~(df['Date'] == date)]
         else:
             pass
@@ -111,12 +113,13 @@ def main():
     browser.maximize_window()
     browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
 
-    ## Check if the program was run today, or it's Sat/Sun
+    ## Check if database update is required
     shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
     date_list = sorted(list(database['Date'].unique()))
-    duplication_checker = shareholding_date in date_list or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 6 or datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday() == 7
+    day_of_week = datetime(int(shareholding_date[:4]),int(shareholding_date[5:7]),int(shareholding_date[8:])).isoweekday()
+    duplication_checker = shareholding_date in date_list or day_of_week == 6 or day_of_week == 7
 
-    if duplication_checker == True:
+    if duplication_checker == True: # data for that date already in database 
         browser.quit()
         input("Database is already up to date. Press 'enter' to exit.")
         sys.exit()
@@ -125,18 +128,14 @@ def main():
     
         for ticker in tickers:
             database = database.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
-
-        #command = input("Data on requested date has been scraped. Input 'g' to scrape another date or simply press enter to exit.")
+        
         browser.quit()
 
         ## Drop unnamed participants
         database.dropna(subset = ['CCASS ID'],inplace = True)
 
-        ## Drop duplicates in case the program was ran more than once a day
-        #database = database.drop_duplicates(subset = ['Ticker','CCASS ID','Date'])
-
-        ## Drop Saturdays & historical data, then calculate DoD change 
-        database = drop_saturdays(database)
+        ## Drop weekends & historical data, then calculate DoD change 
+        database = drop_weekends(database)
         database = drop_historicals(database)
         database = get_DoD(database)
 
@@ -144,7 +143,7 @@ def main():
         database.to_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv', index = False)
 
         print("--- %s seconds ---" % (time.time() - start_time))
-        #input("Database updated. Press 'enter' to exit.")
+        input("Database updated. Press 'enter' to exit.")
         time.sleep(10)
         sys.exit()
 
