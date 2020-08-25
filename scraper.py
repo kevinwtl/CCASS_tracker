@@ -27,12 +27,13 @@ def scrape_single_page(ticker):
     browser.find_element_by_name('txtStockCode').clear()
     browser.find_element_by_name('txtStockCode').send_keys(ticker)
     browser.find_element_by_id('btnSearch').click()
-
+    
     ## Put intervals in between searches to avoid being spotted as a robot
     browser.implicitly_wait(2)
     time.sleep(2)
 
     ## Get data on that page
+    shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
     soup = BeautifulSoup(browser.page_source, 'lxml')
     table = soup.find('table')
     df = pd.read_html(str(table))[0][['Participant ID','Shareholding']]
@@ -49,13 +50,7 @@ def scrape_single_page(ticker):
 
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
-    df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, True, False]).reset_index(drop = True)
 
-
-    for ticker in list(df['Ticker'].unique()):
-        for participant in list(df['CCASS ID'].unique()):
-            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
-    
     # Handle first-time purchase (i.e. historical data is not available)
     for i in range(len(df[(df['DoD Change'].isnull())])):
         try:
@@ -66,6 +61,25 @@ def get_DoD(df):
         except:
             pass
 
+    # Handle cleared positions (i.e. current data is not available)
+    ytd = sorted(list(df['Date'].unique()))[-2]
+    tdy = sorted(list(database['Date'].unique()))[-1]
+
+    for ticker in tickers:
+        ytd_list = list(df[(df['Date']==ytd) & (df['Ticker']==ticker) & (df['Shareholding'] != 0)]['CCASS ID'])
+        tdy_list = list(df[(df['Date']==tdy) & (df['Ticker']==ticker)]['CCASS ID'])
+        for participant in ytd_list:
+            if participant not in tdy_list:
+                df.append({'CCASS ID':participant,'Ticker':ticker,'Date':tdy,'Shareholding':0, '% of Total Issued Shares/Warrants/Units':0},ignore_index=True)
+
+
+    # Calculating DoD Change
+    df = df.sort_values(['Date', 'Ticker','Shareholding'], ascending=[False, True, False]).reset_index(drop = True)
+
+    for ticker in list(df['Ticker'].unique()):
+        for participant in list(df['CCASS ID'].unique()):
+            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
+    
     return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
 
 def drop_saturdays(df):
@@ -91,15 +105,11 @@ def main():
     global database, browser, shareholding_date
 
     ## Get the browser set up
+    options = webdriver.ChromeOptions() 
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
     browser = webdriver.Chrome(ChromeDriverManager().install()) # Download chromdriver
-    #browser.minimize_window()
+    browser.maximize_window()
     browser.get(r'https://www.hkexnews.hk/sdw/search/searchsdw.aspx')
-
-    # ## Search something first so the df wont be off
-    # browser.find_element_by_name('txtStockCode').clear()
-    # browser.find_element_by_name('txtStockCode').send_keys('0024')
-    # browser.find_element_by_id('btnSearch').click()
-
 
     ## Check if the program was run today, or it's Sat/Sun
     shareholding_date = browser.find_element_by_name('txtShareholdingDate').get_attribute('value')
@@ -112,6 +122,7 @@ def main():
         sys.exit()
     else:
         ## Perform scraping
+    
         for ticker in tickers:
             database = database.append(scrape_single_page(ticker), sort=True).reset_index(drop = True)
 
