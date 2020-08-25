@@ -10,7 +10,7 @@ import sys
 import os
 start_time = time.time()
 
-os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
+os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub')
 
 # Global variables
 try:

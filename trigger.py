@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 import win32com.client as win32
 
-os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub\\')
+os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub')
 
 # Global variables
 pd.options.display.float_format = "{:,.2f}".format
