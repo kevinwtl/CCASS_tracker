@@ -42,7 +42,7 @@ def recent_trades_query(ticker,CCASS_ID,cum_change,threshold_multiplier = 0.1):
     df = database.groupby(['Ticker','CCASS ID']).get_group((ticker,CCASS_ID)).loc[(abs(database['DoD Change'])>threshold)].reset_index(drop = True)
 
     df['Net Cumulative Change (%) *'] = cum_change
-    #df = df.append(row)
+
     df = df.set_index(['Ticker','CCASS ID','Net Cumulative Change (%) *', 'Date'])
 
     df = df.sort_values(by = 'Date', ascending = True)

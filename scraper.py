@@ -61,16 +61,16 @@ def get_DoD(df):
         except:
             pass
 
-    # Handle cleared positions (i.e. current data is not available)
+    # Handle cleared positions (i.e. no data today, but on last trading day)
     ytd = sorted(list(df['Date'].unique()))[-2]
-    tdy = sorted(list(database['Date'].unique()))[-1]
+    tdy = sorted(list(df['Date'].unique()))[-1]
 
-    for ticker in tickers:
+    for ticker in [int(i) for i in tickers]:
         ytd_list = list(df[(df['Date']==ytd) & (df['Ticker']==ticker) & (df['Shareholding'] != 0)]['CCASS ID'])
         tdy_list = list(df[(df['Date']==tdy) & (df['Ticker']==ticker)]['CCASS ID'])
         for participant in ytd_list:
             if participant not in tdy_list:
-                df.append({'CCASS ID':participant,'Ticker':ticker,'Date':tdy,'Shareholding':0, '% of Total Issued Shares/Warrants/Units':0},ignore_index=True)
+                df = df.append({'CCASS ID':participant,'Ticker':ticker,'Date':tdy,'Shareholding':0, '% of Total Issued Shares/Warrants/Units':0},ignore_index=True)
 
 
     # Calculating DoD Change
