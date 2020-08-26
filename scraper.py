@@ -16,7 +16,7 @@ os.chdir(r'C:\\Users\\kevinwong\\Documents\\GitHub')
 try:
     database = pd.read_csv('CCASS_tracker' + os.sep + 'data' + os.sep + 'CCASS_database.csv') # Import Database
 except FileNotFoundError:
-    database = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change'])
+    database = pd.DataFrame(columns = ['Ticker','CCASS ID','Date','Shareholding',r'% of Issued Shares *','DoD Change (%) *'])
     
 tickers = ['0024', '0412', '0456', '0556', '0997', '1166', '1563', '1600', '1608', '1862', '1962', '2014', '2060', '3836', '6828', '8047', '8078', '8086', '8422', '8501']
 
@@ -41,23 +41,23 @@ def scrape_single_page(ticker):
     df['CCASS ID'] = df['CCASS ID'].str[16:]
     df['Shareholding'] = df['Shareholding'].str[14:].replace(',','',regex = True).astype(np.int64)
     issued_shares = int(browser.find_elements_by_class_name('summary-value')[0].text.replace(',',''))
-    df[r'% of Total Issued Shares/Warrants/Units'] = df['Shareholding']/issued_shares * 100
+    df[r'% of Issued Shares *'] = df['Shareholding']/issued_shares * 100
     df['Ticker'] = int(browser.find_element_by_name('txtStockCode').get_attribute('value'))
     df['Date'] = shareholding_date
 
 
-    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units']]
+    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Issued Shares *']]
 
 def get_DoD(df):
     '''Add a column of DoD Changes (in shareholding) to the DataFrame.'''
 
     # Handle first-time purchase (i.e. historical data is not available)
-    for i in range(len(df[(df['DoD Change'].isnull())])):
+    for i in range(len(df[(df['DoD Change (%) *'].isnull())])):
         try:
-            row = df[(df['DoD Change'].isnull())].iloc[i]
+            row = df[(df['DoD Change (%) *'].isnull())].iloc[i]
             if row['Date'] != sorted(list(df['Date'].unique()))[0]:
                 index = row.name
-                df.loc[index,'DoD Change'] = row[r'% of Total Issued Shares/Warrants/Units']
+                df.loc[index,'DoD Change (%) *'] = row[r'% of Issued Shares *']
         except:
             pass
 
@@ -70,7 +70,7 @@ def get_DoD(df):
         tdy_list = list(df[(df['Date']==tdy) & (df['Ticker']==ticker)]['CCASS ID'])
         for participant in ytd_list:
             if participant not in tdy_list:
-                df = df.append({'CCASS ID':participant,'Ticker':ticker,'Date':tdy,'Shareholding':0, '% of Total Issued Shares/Warrants/Units':0},ignore_index=True)
+                df = df.append({'CCASS ID':participant,'Ticker':ticker,'Date':tdy,'Shareholding':0, '% of Issued Shares *':0},ignore_index=True)
 
 
     # Calculating DoD Change
@@ -78,9 +78,9 @@ def get_DoD(df):
 
     for ticker in list(df['Ticker'].unique()):
         for participant in list(df['CCASS ID'].unique()):
-            df['DoD Change'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][r'% of Total Issued Shares/Warrants/Units'].diff(-1))
+            df['DoD Change (%) *'].update(df.loc[(df['Ticker'] == ticker) & (df['CCASS ID'] == participant) & (df['Date'].isin(sorted(list(df['Date'].unique()))))][r'% of Issued Shares *'].diff(-1))
     
-    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Total Issued Shares/Warrants/Units','DoD Change']]
+    return df[['Ticker','CCASS ID','Date','Shareholding',r'% of Issued Shares *','DoD Change (%) *']]
 
 def drop_weekends(df):
     '''Remove data on weekends because they are the same as Friday.'''

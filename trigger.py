@@ -22,15 +22,15 @@ def block_trade_query(df, days = 15 ,threshold = 10):
 
     date_list = sorted(list(df['Date'].unique()))[-days:]
     filtered_df = df[df.Date.isin(date_list)]
-    df1 = filtered_df.groupby(['Ticker','CCASS ID'])['DoD Change'].sum().reset_index()
-    df1.rename(columns = {'DoD Change':'Cumulative Change'}, inplace = True)
+    df1 = filtered_df.groupby(['Ticker','CCASS ID'])['DoD Change (%) *'].sum().reset_index()
+    df1.rename(columns = {'DoD Change (%) *':'Net Cumulative Change (%) *'}, inplace = True)
+    df1 = df1[abs(df1['Net Cumulative Change (%) *']) > threshold]
     df1['Date'] = last_data_date
     df1['Shareholding'] = np.nan
-    df1[r'% of Total Issued Shares/Warrants/Units'] = np.nan
-    df1['DoD Change'] = np.nan
+    df1[r'% of Issued Shares *'] = np.nan
+    df1['DoD Change (%) *'] = np.nan
     df1 = df1.set_index(['Ticker','CCASS ID'])
-    df1.update(df[df['Date'] == date_list[-1]].set_index(['Ticker','CCASS ID']))
-    df1 = df1[abs(df1['Cumulative Change']) > threshold]
+    df1.update(df[df['Date'] == last_data_date].set_index(['Ticker','CCASS ID']))
 
     return df1.reset_index(drop = False)
 
@@ -39,7 +39,7 @@ def recent_trades_query(ticker,CCASS_ID,cum_change,threshold_multiplier = 0.1):
 
     threshold = abs(cum_change) * threshold_multiplier
 
-    df = database.groupby(['Ticker','CCASS ID']).get_group((ticker,CCASS_ID)).loc[(abs(database['DoD Change'])>threshold)].reset_index(drop = True)
+    df = database.groupby(['Ticker','CCASS ID']).get_group((ticker,CCASS_ID)).loc[(abs(database['DoD Change (%) *'])>threshold)].reset_index(drop = True)
 
     df['Net Cumulative Change (%) *'] = cum_change
 
@@ -50,9 +50,9 @@ def recent_trades_query(ticker,CCASS_ID,cum_change,threshold_multiplier = 0.1):
     df = df.replace(np.nan, '', regex=True) # Replace nan by blank for better formatting
 
     # Rename columns
-    df.columns = ['Shareholding', '% of Total Issued Shares/Warrants/Units *', 'DoD Change (%) *']
+    df.columns = ['Shareholding', '% of Issued Shares *', 'DoD Change (%) *']
 
-    return df
+    return df.reset_index()
 
 
 def create_graph(ticker, CCASS_ID, export_path):
@@ -88,27 +88,28 @@ def main():
     
     summary_df.reset_index(drop = True, inplace = True)
 
+
     if len(summary_df) == 0: # When there were no changes
         mail.To = 'jameshan@chinasilveram.com;prashantgurung@chinasilveram.com'
         mail.Subject = 'CCASS major changes (as of ' + last_data_date + ' day end)'
-        my_html = '<body style="font-size:11pt;font-family:Calibri"><p>Dear Team,</p><p>&nbsp;</p><p>There were NO significant net changes on CCASS (&gt; 10% net cumulative change) over the last 15 trading days.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p></body>'
-        mail.HTMLBody = my_html
-        mail.Display(False)
-        #mail.Send()
+        aggregated_html = '<body style="font-size:11pt;font-family:Calibri"><p>Dear Team,</p><p>&nbsp;</p><p>There were NO significant net changes on CCASS (&gt; 10% net cumulative change) over the last 15 trading days.</p><p>&nbsp;</p><p>Regards,</p><p>Kevin Wong</p></body>'
+
     else:
         ## Create a table which shows block traders & its recent trades
         table = pd.DataFrame()
         for i in summary_df.index:
             temp_row = summary_df.iloc[i]
-            temp_table = recent_trades_query(ticker = temp_row['Ticker'],CCASS_ID = temp_row['CCASS ID'],cum_change = temp_row['Cumulative Change'])
+            temp_table = recent_trades_query(ticker = temp_row['Ticker'],CCASS_ID = temp_row['CCASS ID'],cum_change = temp_row['Net Cumulative Change (%) *'])
             table = table.append(temp_table)
-        table.reset_index(drop = False, inplace = True)
+        table.reset_index(drop = True, inplace = True)
+
+        table = table.merge(summary_df, how = 'outer')
 
         ## Mapping CCASS participants & Stock names
         table['Participant'] = table['CCASS ID'].map(participants_dict)
         table['Stock Name'] = table['Ticker'].map(securities_dict)
 
-        table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Net Cumulative Change (%) *', 'Date'])
+        table = table.set_index(['Ticker','Stock Name','CCASS ID','Participant','Net Cumulative Change (%) *', 'Date']).sort_index(level=0)
 
         graphing_df = table.reset_index()[['Ticker','Stock Name','CCASS ID','Participant']].drop_duplicates().reset_index(drop = True)
 
@@ -143,14 +144,14 @@ def main():
         with_change_html = "<p>Here's the summary of the recent CCASS major changes (&gt;10% net cumulative change over the last 15 trading days).</p><p>&nbsp;</p>"
         opening_html = with_change_html if last_data_date in list(table.reset_index()['Date'].unique()) else no_change_html
         ending_html = "<p>Regards,</p><p>Kevin Wong</p>"
-        content_html = table.to_html(index = True,formatters=formatters) + "<p>* Denominator of the percentages is the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html
+        content_html = table.to_html(index = True,formatters=formatters) + "<p>* Denominators are the number of all shares/warrants/units issued in total.</p><p>&nbsp;</p>"  + png_aggregated_html
 
         aggregated_html = '<body style="font-size:11pt;font-family:Calibri">' + heading_html + opening_html + content_html + ending_html + '</body>'
 
-        mail.HTMLBody = aggregated_html
-        mail.Display(False)
-        
-        #mail.Send()
+    mail.HTMLBody = aggregated_html
+    mail.Display(False)
+    
+    #mail.Send()
 
 
 
