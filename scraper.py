@@ -144,7 +144,6 @@ def main():
 
         print("--- %s seconds ---" % (time.time() - start_time))
         input("Database updated. Press 'enter' to exit.")
-        time.sleep(10)
         sys.exit()
 
 
